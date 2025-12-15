@@ -111,13 +111,13 @@ class PassConfig:
     """
 
     # New flags
-    fuse_norm_quant: bool = Field(default=None)
+    fuse_norm_quant: bool = Field(default=False)
     """Fuse the custom RMSNorm + quant ops."""
-    fuse_act_quant: bool = Field(default=None)
+    fuse_act_quant: bool = Field(default=False)
     """Fuse the custom SiluMul + quant ops."""
     fuse_attn_quant: bool = Field(default=None)
     """Fuse the custom attention + quant ops."""
-    eliminate_noops: bool = Field(default=None)
+    eliminate_noops: bool = Field(default=True)
     """Eliminate no-op ops."""
     enable_sp: bool = Field(default=None)
     """Enable sequence parallelism."""
@@ -462,7 +462,7 @@ class CompilationConfig:
     constructor, e.g. `CompilationConfig(inductor_passes={"a": func})`."""
 
     # CudaGraph compilation
-    cudagraph_mode: CUDAGraphMode = Field(default=None)
+    cudagraph_mode: CUDAGraphMode = Field(default=CUDAGraphMode.FULL)
     """
     The mode of the cudagraph:
 
@@ -829,6 +829,9 @@ class CompilationConfig:
         if self.backend == "":
             self.backend = current_platform.get_compile_backend()
 
+        if self.cudagraph_mode == CUDAGraphMode.FULL:
+            self.pass_config.fuse_attn_quant = True
+
     def init_backend(self, vllm_config: "VllmConfig") -> str | Callable:
         """
         Initialize the backend for the compilation config from a vllm config.
@@ -1021,6 +1024,14 @@ class CompilationConfig:
         return self.splitting_ops is not None and all(
             op in self.splitting_ops for op in self._attention_ops
         )
+
+    def add_missing_attention_splitting_ops(self):
+        if self.splitting_ops is None:
+            self.splitting_ops = list(self._attention_ops)
+            return
+        for op in self._attention_ops:
+            if op not in self.splitting_ops:
+                self.splitting_ops.append(op)
 
     def is_attention_compiled_piecewise(self) -> bool:
         if not self.splitting_ops_contain_attention():
