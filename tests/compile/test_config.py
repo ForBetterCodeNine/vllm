@@ -249,6 +249,7 @@ def test_moe_splitting_ops_deepep_ht_piecewise():
     assert splitting_ops is not None
     assert "vllm::moe_forward" in splitting_ops
     assert "vllm::moe_forward_shared" in splitting_ops
+    assert config.compilation_config.cudagraph_copy_inputs is True
 
 
 def test_moe_splitting_ops_deepep_ht_inductor_partition():

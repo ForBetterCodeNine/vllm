@@ -997,6 +997,8 @@ class CompilationConfig:
                 # fall back to piecewise when MoE splitting is required.
                 self.cudagraph_mode = CUDAGraphMode.PIECEWISE
 
+            self.cudagraph_copy_inputs = True
+
     def set_splitting_ops_for_attn_fusion(self):
         assert self.pass_config.fuse_attn_quant
         if self.splitting_ops is None:
